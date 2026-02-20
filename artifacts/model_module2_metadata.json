@@ -1,0 +1,9 @@
+{
+  "model_name": "logistic_regression",
+  "threshold": 0.4662081375423358,
+  "target": "will_churn_30d",
+  "metrics": {
+    "pr_auc": 0.4125660397827945,
+    "roc_auc": 0.6711322965048303
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "model_name": "logistic_regression",
+  "threshold": 0.23608665478027394,
+  "target": "will_sell_next_7d",
+  "cutoff_date": "2025-10-20 00:00:00",
+  "metrics": {
+    "pr_auc": 0.8201553531656047,
+    "roc_auc": 0.5627743932544054
+  }
+}
