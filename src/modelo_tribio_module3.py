@@ -1,110 +1,93 @@
-import os, json
+import os
+import json
 import numpy as np
 import pandas as pd
-from joblib import load, dump
+from joblib import dump
 
+from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import (
-    accuracy_score, f1_score, roc_auc_score, average_precision_score,
-    confusion_matrix, classification_report, precision_recall_curve
-)
+from sklearn.metrics import f1_score, roc_auc_score, average_precision_score, confusion_matrix
 
-PROCESSED_DIR = "data/processed"
 ART_DIR = "artifacts"
-OUT_MODEL_PATH = os.path.join(ART_DIR, "model_module3.joblib")
+PROCESSED_DIR = "data/processed"
 
-def print_metrics(y_true, y_pred, y_proba=None, title=""):
-    print(f"\n=== {title} ===")
-    print("Accuracy:", round(accuracy_score(y_true, y_pred), 4))
-    print("F1:", round(f1_score(y_true, y_pred, zero_division=0), 4))
-    print("CM:\n", confusion_matrix(y_true, y_pred))
-    if y_proba is not None:
-        print("ROC-AUC:", round(roc_auc_score(y_true, y_proba), 4))
-        print("PR-AUC:", round(average_precision_score(y_true, y_proba), 4))
-    print(classification_report(y_true, y_pred, digits=3, zero_division=0))
+MODEL_OUT = os.path.join(ART_DIR, "model_module3.joblib")
+META_OUT  = os.path.join(ART_DIR, "model_module3_metadata.json")
 
-def best_threshold_for_f1(y_true, y_proba):
-    prec, rec, thr = precision_recall_curve(y_true, y_proba)
-    f1s = (2 * prec * rec) / (prec + rec + 1e-9)
-    idx = int(np.nanargmax(f1s))
-    best_thr = float(thr[idx]) if idx < len(thr) else 0.5
-    return best_thr, float(f1s[idx])
+TARGET = "high_conversion_session"
+
+def find_best_threshold(y_true, proba):
+    best_thr = 0.5
+    best_val = -1
+    for thr in np.linspace(0.05, 0.95, 181):
+        pred = (proba >= thr).astype(int)
+        val = f1_score(y_true, pred)
+        if val > best_val:
+            best_val = val
+            best_thr = thr
+    return best_thr, best_val
 
 def main():
-    X_train = pd.read_parquet(os.path.join(PROCESSED_DIR, "m3_X_train.parquet"))
-    X_test = pd.read_parquet(os.path.join(PROCESSED_DIR, "m3_X_test.parquet"))
-    y_train = np.load(os.path.join(PROCESSED_DIR, "m3_y_train.npy"))
-    y_test = np.load(os.path.join(PROCESSED_DIR, "m3_y_test.npy"))
+    os.makedirs(ART_DIR, exist_ok=True)
 
-    print("Train:", X_train.shape, "Test:", X_test.shape)
-    print("High rate train:", round(y_train.mean(), 4), "test:", round(y_test.mean(), 4))
+    X_train = pd.read_parquet(f"{PROCESSED_DIR}/m3_X_train.parquet")
+    X_test  = pd.read_parquet(f"{PROCESSED_DIR}/m3_X_test.parquet")
+    y_train = np.load(f"{PROCESSED_DIR}/m3_y_train.npy")
+    y_test  = np.load(f"{PROCESSED_DIR}/m3_y_test.npy")
 
-    # Baseline: clase mayoritaria
-    maj = int(np.bincount(y_train).argmax())
-    y_pred_maj = np.full_like(y_test, maj)
-    print_metrics(y_test, y_pred_maj, title="Baseline: Clase mayoritaria")
+    num_cols = X_train.select_dtypes(include=["number"]).columns.tolist()
+    cat_cols = [c for c in X_train.columns if c not in num_cols]
 
-    prep_bundle = load(os.path.join(ART_DIR, "preprocess_module3.joblib"))
-    preprocess = prep_bundle["preprocess"]
-    target = prep_bundle.get("target", "high_conversion_30d")
+    preprocess = ColumnTransformer([
+        ("num", Pipeline([
+            ("imputer", SimpleImputer(strategy="median")),
+            ("scaler", StandardScaler())
+        ]), num_cols),
+        ("cat", Pipeline([
+            ("imputer", SimpleImputer(strategy="most_frequent")),
+            ("ohe", OneHotEncoder(handle_unknown="ignore"))
+        ]), cat_cols)
+    ])
 
-    # Modelo 1: LR
-    lr = LogisticRegression(max_iter=3000, class_weight="balanced", solver="lbfgs", n_jobs=-1)
-    pipe_lr = Pipeline([("prep", preprocess), ("model", lr)])
-    pipe_lr.fit(X_train, y_train)
+    model = LogisticRegression(max_iter=3000, class_weight="balanced")
 
-    proba_lr = pipe_lr.predict_proba(X_test)[:, 1]
-    thr_lr, f1_lr = best_threshold_for_f1(y_test, proba_lr)
-    pred_lr = (proba_lr >= thr_lr).astype(int)
-    print_metrics(y_test, pred_lr, y_proba=proba_lr, title=f"Logistic (thr={thr_lr:.3f}, F1={f1_lr:.3f})")
+    pipe = Pipeline([
+        ("preprocess", preprocess),
+        ("model", model)
+    ])
 
-    # Modelo 2: RF
-    rf = RandomForestClassifier(
-        n_estimators=600, n_jobs=-1, random_state=42,
-        class_weight="balanced_subsample", min_samples_split=4, min_samples_leaf=2
-    )
-    pipe_rf = Pipeline([("prep", preprocess), ("model", rf)])
-    pipe_rf.fit(X_train, y_train)
+    pipe.fit(X_train, y_train)
 
-    proba_rf = pipe_rf.predict_proba(X_test)[:, 1]
-    pred_rf = (proba_rf >= 0.5).astype(int)
-    print_metrics(y_test, pred_rf, y_proba=proba_rf, title="RandomForest (thr=0.5)")
+    proba = pipe.predict_proba(X_test)[:,1]
+    thr, f1best = find_best_threshold(y_test, proba)
+    pred = (proba >= thr).astype(int)
 
-    # Selección por PR-AUC
-    pr_lr = average_precision_score(y_test, proba_lr)
-    pr_rf = average_precision_score(y_test, proba_rf)
-
-    if pr_rf > pr_lr:
-        best = {"name": "random_forest", "pipe": pipe_rf, "thr": 0.5, "proba": proba_rf}
-    else:
-        best = {"name": "logistic_regression", "pipe": pipe_lr, "thr": float(thr_lr), "proba": proba_lr}
-
-    bundle = {
-        "model_name": best["name"],
-        "pipeline": best["pipe"],
-        "threshold": float(best["thr"]),
-        "target": target,
-        "metrics": {
-            "pr_auc": float(average_precision_score(y_test, best["proba"])),
-            "roc_auc": float(roc_auc_score(y_test, best["proba"])),
-        }
+    metrics = {
+        "f1_best": float(f1best),
+        "roc_auc": float(roc_auc_score(y_test, proba)),
+        "pr_auc": float(average_precision_score(y_test, proba)),
+        "confusion_matrix": confusion_matrix(y_test, pred).tolist(),
+        "conversion_rate": float(y_test.mean())
     }
 
-    os.makedirs(ART_DIR, exist_ok=True)
-    dump(bundle, OUT_MODEL_PATH)
+    bundle = {
+        "pipeline": pipe,
+        "threshold": float(thr),
+        "model_name": "LogisticRegression",
+        "target": TARGET,
+        "metrics": metrics
+    }
 
-    with open(os.path.join(ART_DIR, "model_module3_metadata.json"), "w", encoding="utf-8") as f:
-        json.dump({
-            "model_name": bundle["model_name"],
-            "threshold": bundle["threshold"],
-            "target": bundle["target"],
-            "metrics": bundle["metrics"],
-        }, f, ensure_ascii=False, indent=2)
+    dump(bundle, MODEL_OUT)
 
-    print("\n✅ Guardado:", OUT_MODEL_PATH)
-    print("Modelo elegido:", bundle["model_name"], "| thr:", round(bundle["threshold"], 3))
+    with open(META_OUT, "w") as f:
+        json.dump(metrics, f, indent=2)
+
+    print("✅ Modelo M3 entrenado")
+    print("ROC-AUC:", round(metrics["roc_auc"],4))
 
 if __name__ == "__main__":
     main()

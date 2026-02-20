@@ -1,10 +1,21 @@
 {
-  "model_name": "logistic_regression",
-  "threshold": 0.23608665478027394,
-  "target": "will_sell_next_7d",
-  "cutoff_date": "2025-10-20 00:00:00",
-  "metrics": {
-    "pr_auc": 0.8201553531656047,
-    "roc_auc": 0.5627743932544054
-  }
+  "f1_best": 0.9922349287025272,
+  "roc_auc": 0.8618766518067138,
+  "pr_auc": 0.9971008513082078,
+  "confusion_matrix": [
+    [
+      73,
+      774
+    ],
+    [
+      51,
+      52710
+    ]
+  ],
+  "pos_rate_test": 0.9842001193851664,
+  "pred_rate_test": 0.9976869124011342,
+  "n_train": 218698,
+  "n_test": 53608,
+  "n_features_input": 23,
+  "model_name": "LogisticRegression(class_weight=balanced)"
 }

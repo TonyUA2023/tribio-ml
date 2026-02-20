@@ -1,9 +1,21 @@
 {
-  "model_name": "logistic_regression",
-  "threshold": 0.4662081375423358,
-  "target": "will_churn_30d",
-  "metrics": {
-    "pr_auc": 0.4125660397827945,
-    "roc_auc": 0.6711322965048303
-  }
+  "f1_best": 0.6217391304347826,
+  "roc_auc": 0.8412978893797307,
+  "pr_auc": 0.6325780038908728,
+  "confusion_matrix": [
+    [
+      775,
+      260
+    ],
+    [
+      88,
+      286
+    ]
+  ],
+  "pos_rate_test": 0.2654364797728886,
+  "pred_rate_test": 0.3875088715400994,
+  "n_train": 5634,
+  "n_test": 1409,
+  "n_features_input": 19,
+  "model_name": "LogisticRegression(class_weight=balanced)"
 }

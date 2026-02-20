@@ -1,9 +1,16 @@
 {
-  "model_name": "random_forest",
-  "threshold": 0.5,
-  "target": "high_conversion_30d",
-  "metrics": {
-    "pr_auc": 0.8662408474395022,
-    "roc_auc": 0.6555733111003035
-  }
+  "f1_best": 0.7542372881355932,
+  "roc_auc": 0.9088675587736964,
+  "pr_auc": 0.7125067973279351,
+  "confusion_matrix": [
+    [
+      2284,
+      434
+    ],
+    [
+      88,
+      801
+    ]
+  ],
+  "conversion_rate": 0.24646520654283338
 }
