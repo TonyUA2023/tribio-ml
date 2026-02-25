@@ -1,0 +1,244 @@
+### TRIBIO IA — API HTTP Examples
+### Compatible con VS Code REST Client extension y JetBrains HTTP Client
+###
+### Dashboard visual: https://tribio-ml-r5btzwfrf9z8eg3pqnkw2h.streamlit.app/
+###
+### NOTA: La REST API (este archivo) requiere desplegar api.py con uvicorn.
+###   La URL de Streamlit arriba es solo el dashboard visual, NO la API.
+###   Cambia @baseUrl a la IP/dominio de tu servidor Python.
+
+@baseUrl = http://localhost:8000
+
+# ─────────────────────────────────────────────────────────
+# HEALTH CHECK
+# ─────────────────────────────────────────────────────────
+
+### Verificar estado del servicio
+GET {{baseUrl}}/health
+Accept: application/json
+
+###
+
+# ─────────────────────────────────────────────────────────
+# MÓDULO 1 — VENTAS
+# ─────────────────────────────────────────────────────────
+
+### Producto con buena configuración (espera: venderá)
+POST {{baseUrl}}/predict/sales
+Content-Type: application/json
+
+{
+  "price": 55.0,
+  "discount_pct": 10.0,
+  "stock": 30,
+  "images_count": 4,
+  "description_length": 500,
+  "featured": 1,
+  "payment_settings_enabled": 1,
+  "has_whatsapp": 1,
+  "plan_id": "pro",
+  "business_type_slug": "store",
+  "business_category_slug": "retail"
+}
+
+###
+
+### Producto con configuración débil (espera: no venderá)
+POST {{baseUrl}}/predict/sales
+Content-Type: application/json
+
+{
+  "price": 120.0,
+  "discount_pct": 0.0,
+  "stock": 0,
+  "images_count": 0,
+  "description_length": 20,
+  "featured": 0,
+  "payment_settings_enabled": 0,
+  "has_whatsapp": 0,
+  "plan_id": "free",
+  "business_type_slug": "store",
+  "business_category_slug": "retail"
+}
+
+###
+
+### Solo campos requeridos (mínimo)
+POST {{baseUrl}}/predict/sales
+Content-Type: application/json
+
+{
+  "price": 35.0
+}
+
+###
+
+# ─────────────────────────────────────────────────────────
+# MÓDULO 2 — CHURN DE CLIENTES
+# ─────────────────────────────────────────────────────────
+
+### Cliente en riesgo alto de churn
+POST {{baseUrl}}/predict/churn
+Content-Type: application/json
+
+{
+  "days_since_last_order": 45,
+  "total_orders_paid": 1,
+  "avg_order_value": 35.0,
+  "cancellation_rate": 0.20,
+  "profile_visits_count": 3,
+  "link_click_to_order_ratio": 0.5,
+  "preferred_payment_method": "cash",
+  "preferred_notification": "sms"
+}
+
+###
+
+### Cliente estable (bajo riesgo)
+POST {{baseUrl}}/predict/churn
+Content-Type: application/json
+
+{
+  "days_since_last_order": 5,
+  "total_orders_paid": 12,
+  "avg_order_value": 150.0,
+  "cancellation_rate": 0.02,
+  "profile_visits_count": 20,
+  "link_click_to_order_ratio": 2.5,
+  "preferred_payment_method": "card",
+  "preferred_notification": "whatsapp"
+}
+
+###
+
+### Mínimo requerido
+POST {{baseUrl}}/predict/churn
+Content-Type: application/json
+
+{
+  "days_since_last_order": 15,
+  "total_orders_paid": 3,
+  "avg_order_value": 80.0
+}
+
+###
+
+# ─────────────────────────────────────────────────────────
+# MÓDULO 3 — DISEÑO / CONFIGURACIÓN DE TIENDA
+# ─────────────────────────────────────────────────────────
+
+### Tienda bien configurada (espera: alta conversión)
+POST {{baseUrl}}/predict/design
+Content-Type: application/json
+
+{
+  "payment_settings_enabled": 1,
+  "hero_has_cta": 1,
+  "hero_slides_count": 3,
+  "navigation_menu_items_count": 6,
+  "has_custom_logo": 1,
+  "has_cover_image": 1,
+  "products_with_image_pct": 0.92,
+  "products_with_description_pct": 0.85,
+  "total_products_active": 80,
+  "products_with_discount_pct": 0.30,
+  "avg_images_per_product": 3.5,
+  "plan_id": "pro",
+  "template_slug": "NikeStyle",
+  "business_type_slug": "store"
+}
+
+###
+
+### Tienda con configuración básica (espera: media/baja conversión)
+POST {{baseUrl}}/predict/design
+Content-Type: application/json
+
+{
+  "payment_settings_enabled": 0,
+  "hero_has_cta": 0,
+  "hero_slides_count": 1,
+  "navigation_menu_items_count": 12,
+  "has_custom_logo": 0,
+  "has_cover_image": 0,
+  "products_with_image_pct": 0.40,
+  "products_with_description_pct": 0.25,
+  "total_products_active": 10,
+  "products_with_discount_pct": 0.05,
+  "avg_images_per_product": 1.0,
+  "plan_id": "free",
+  "template_slug": "Minimal",
+  "business_type_slug": "store"
+}
+
+###
+
+### Configuración por defecto
+POST {{baseUrl}}/predict/design
+Content-Type: application/json
+
+{}
+
+###
+
+# ─────────────────────────────────────────────────────────
+# MÓDULO 4 — CONTENIDO / ENGAGEMENT / CRECIMIENTO
+# ─────────────────────────────────────────────────────────
+
+### Estrategia de contenido sólida (espera: crecerá)
+POST {{baseUrl}}/predict/growth
+Content-Type: application/json
+
+{
+  "posts_count_30d": 18,
+  "stories_count_30d": 35,
+  "pct_posts_with_video": 0.65,
+  "days_between_posts": 1.7,
+  "avg_views_per_post": 3000.0,
+  "avg_likes_per_post": 120.0,
+  "avg_comments_per_post": 15.0,
+  "avg_rating": 4.8,
+  "pct_1_2_star": 0.02,
+  "reviews_with_photo_pct": 0.35,
+  "post_engagement_rate": 0.06,
+  "business_type_slug": "store",
+  "has_instagram": 1,
+  "has_tiktok": 1,
+  "has_facebook": 1,
+  "has_whatsapp": 1
+}
+
+###
+
+### Estrategia débil (espera: estable/baja)
+POST {{baseUrl}}/predict/growth
+Content-Type: application/json
+
+{
+  "posts_count_30d": 2,
+  "stories_count_30d": 3,
+  "pct_posts_with_video": 0.10,
+  "days_between_posts": 15.0,
+  "avg_views_per_post": 100.0,
+  "avg_likes_per_post": 5.0,
+  "avg_comments_per_post": 0.5,
+  "avg_rating": 3.8,
+  "pct_1_2_star": 0.20,
+  "reviews_with_photo_pct": 0.05,
+  "post_engagement_rate": 0.01,
+  "business_type_slug": "restaurant",
+  "has_instagram": 0,
+  "has_tiktok": 0,
+  "has_facebook": 0,
+  "has_whatsapp": 1
+}
+
+###
+
+### Configuración por defecto
+POST {{baseUrl}}/predict/growth
+Content-Type: application/json
+
+{}
+
+###
