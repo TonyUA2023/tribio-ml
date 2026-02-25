@@ -14,7 +14,7 @@
 │     https://tribio-ml-r5btzwfrf9z8eg3pqnkw2h.streamlit.app/   │
 │                                                                 │
 │  2. REST API (FastAPI — para integración programática)          │
-│     http://TU_SERVIDOR:8000   ← debes desplegar este servicio  │
+│     https://tonyua-tribio.hf.space   ← debes desplegar este servicio  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -92,9 +92,9 @@ uvicorn api:app --host 0.0.0.0 --port 8000 --workers 2
 ### Verificar que funciona
 
 ```
-GET http://TU_SERVIDOR:8000/health
-GET http://TU_SERVIDOR:8000/docs        ← Swagger UI interactivo
-GET http://TU_SERVIDOR:8000/redoc       ← ReDoc
+GET https://tonyua-tribio.hf.space/health
+GET https://tonyua-tribio.hf.space/docs        ← Swagger UI interactivo
+GET https://tonyua-tribio.hf.space/redoc       ← ReDoc
 ```
 
 ### Variable de entorno (modelos en otra ruta)
@@ -127,7 +127,7 @@ X-API-Key: tu_clave_secreta
 Verifica que el servicio está activo y qué modelos están cargados.
 
 ```http
-GET http://TU_SERVIDOR:8000/health
+GET https://tonyua-tribio.hf.space/health
 ```
 
 **Response 200:**
@@ -151,7 +151,7 @@ GET http://TU_SERVIDOR:8000/health
 **¿Este producto venderá en los próximos 7 días?**
 
 ```http
-POST http://TU_SERVIDOR:8000/predict/sales
+POST https://tonyua-tribio.hf.space/predict/sales
 Content-Type: application/json
 ```
 
@@ -208,7 +208,7 @@ Content-Type: application/json
 **¿Este cliente está en riesgo de churn en los próximos 30 días?**
 
 ```http
-POST http://TU_SERVIDOR:8000/predict/churn
+POST https://tonyua-tribio.hf.space/predict/churn
 Content-Type: application/json
 ```
 
@@ -259,7 +259,7 @@ Content-Type: application/json
 **¿La configuración de esta tienda generará alta conversión en los próximos 30 días?**
 
 ```http
-POST http://TU_SERVIDOR:8000/predict/design
+POST https://tonyua-tribio.hf.space/predict/design
 Content-Type: application/json
 ```
 
@@ -322,7 +322,7 @@ Content-Type: application/json
 **¿El negocio crecerá la próxima semana según su estrategia de contenido?**
 
 ```http
-POST http://TU_SERVIDOR:8000/predict/growth
+POST https://tonyua-tribio.hf.space/predict/growth
 Content-Type: application/json
 ```
 
@@ -447,14 +447,14 @@ Todos los endpoints de predicción devuelven la misma estructura:
 ### Configuración en `.env`
 
 ```env
-TRIBIO_API_URL=http://IP_SERVIDOR_PYTHON:8000
+TRIBIO_API_URL=https://tonyua-tribio.hf.space
 ```
 
 ### `config/services.php`
 
 ```php
 'tribio_ml' => [
-    'url' => env('TRIBIO_API_URL', 'http://localhost:8000'),
+    'url' => env('TRIBIO_API_URL', 'https://tonyua-tribio.hf.space'),
 ],
 ```
 
@@ -701,8 +701,8 @@ docker run -d -p 8000:8000 --name tribio-api tribio-api
 ## Referencias
 
 - **Dashboard visual**: https://tribio-ml-r5btzwfrf9z8eg3pqnkw2h.streamlit.app/
-- **Swagger UI (REST API)**: `http://TU_SERVIDOR:8000/docs`
-- **ReDoc**: `http://TU_SERVIDOR:8000/redoc`
+- **Swagger UI (REST API)**: `https://tonyua-tribio.hf.space/docs`
+- **ReDoc**: `https://tonyua-tribio.hf.space/redoc`
 
 ---
 

@@ -3,11 +3,13 @@ TRIBIO IA — REST API
 Motor de predicción ML expuesto como servicio HTTP (FastAPI).
 Versión: 1.0.0
 
+REST API (Hugging Face Spaces):
+  https://tonyua-tribio.hf.space
+
 Dashboard visual (Streamlit):
   https://tribio-ml-r5btzwfrf9z8eg3pqnkw2h.streamlit.app/
 
-La REST API (este archivo) debe desplegarse por separado en un servidor
-con Python/uvicorn. El dashboard Streamlit y esta API son servicios distintos.
+Desplegado con Docker en HF Spaces (puerto interno 7860).
 """
 
 import os
@@ -61,6 +63,7 @@ app = FastAPI(
         "- **Módulo 3**: Probabilidad de alta conversión (diseño/config)\n"
         "- **Módulo 4**: Predicción de crecimiento por contenido/engagement\n\n"
         "Cada endpoint devuelve `probability` (0-1), `prediction` (0/1) y `recommendations` accionables.\n\n"
+        "**REST API**: https://tonyua-tribio.hf.space\n\n"
         "**Dashboard visual**: https://tribio-ml-r5btzwfrf9z8eg3pqnkw2h.streamlit.app/"
     ),
     version="1.0.0",
@@ -212,7 +215,8 @@ def root():
     """Bienvenida rápida."""
     return {
         "message": "TRIBIO IA Prediction API",
-        "docs": "/docs",
+        "docs": "https://tonyua-tribio.hf.space/docs",
+        "api_base": "https://tonyua-tribio.hf.space",
         "dashboard": "https://tribio-ml-r5btzwfrf9z8eg3pqnkw2h.streamlit.app/",
         "version": "1.0.0",
     }

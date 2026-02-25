@@ -20,7 +20,7 @@ https://tribio-ml-r5btzwfrf9z8eg3pqnkw2h.streamlit.app/
 
 **REST API** (para integración programática):
 ```
-http://TU_SERVIDOR:8000
+https://tonyua-tribio.hf.space
 ```
 > Reemplaza `TU_SERVIDOR` con la IP o dominio donde está desplegado el servicio FastAPI.
 
@@ -43,7 +43,7 @@ http://TU_SERVIDOR:8000
 ### 1. Health Check
 
 ```
-GET http://TU_SERVIDOR:8000/health
+GET https://tonyua-tribio.hf.space/health
 ```
 
 Úsalo para verificar disponibilidad. Si `models_loaded.m1` (o cualquier módulo) es `false`, ese módulo no está disponible.
@@ -64,7 +64,7 @@ GET http://TU_SERVIDOR:8000/health
 **Pregunta:** ¿Este producto venderá en los próximos 7 días?
 
 ```
-POST http://TU_SERVIDOR:8000/predict/sales
+POST https://tonyua-tribio.hf.space/predict/sales
 ```
 
 **Cuándo usarlo:** Cuando tengas datos de un producto (precio, imágenes, stock, etc.)
@@ -131,7 +131,7 @@ POST /predict/sales
 **Pregunta:** ¿Este cliente dejará de comprar en los próximos 30 días?
 
 ```
-POST http://TU_SERVIDOR:8000/predict/churn
+POST https://tonyua-tribio.hf.space/predict/churn
 ```
 
 **Cuándo usarlo:** Cuando tengas datos de comportamiento de un cliente y quieras
@@ -192,7 +192,7 @@ POST /predict/churn
 **Pregunta:** ¿La configuración actual de esta tienda generará alta conversión en 30 días?
 
 ```
-POST http://TU_SERVIDOR:8000/predict/design
+POST https://tonyua-tribio.hf.space/predict/design
 ```
 
 **Cuándo usarlo:** Cuando tengas datos de configuración de una tienda y quieras
@@ -248,7 +248,7 @@ evaluar si su setup actual es óptimo para convertir visitas en ventas.
 **Pregunta:** ¿El negocio crecerá la próxima semana basado en su estrategia de contenido?
 
 ```
-POST http://TU_SERVIDOR:8000/predict/growth
+POST https://tonyua-tribio.hf.space/predict/growth
 ```
 
 **Cuándo usarlo:** Cuando tengas métricas de contenido y redes sociales del negocio
@@ -343,7 +343,7 @@ Todos los endpoints de predicción devuelven exactamente este esquema:
 Si quieres que un agente LLM use esta API automáticamente, puedes incluir este bloque en su system prompt:
 
 ```
-Tienes acceso a la API de TRIBIO IA en http://TU_SERVIDOR:8000.
+Tienes acceso a la API de TRIBIO IA en https://tonyua-tribio.hf.space.
 Esta API tiene 4 módulos de predicción ML para negocios de e-commerce:
 
 - POST /predict/sales → predice si un producto venderá en 7 días (requiere: price)

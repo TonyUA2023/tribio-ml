@@ -1,13 +1,11 @@
 ### TRIBIO IA — API HTTP Examples
 ### Compatible con VS Code REST Client extension y JetBrains HTTP Client
 ###
-### Dashboard visual: https://tribio-ml-r5btzwfrf9z8eg3pqnkw2h.streamlit.app/
-###
-### NOTA: La REST API (este archivo) requiere desplegar api.py con uvicorn.
-###   La URL de Streamlit arriba es solo el dashboard visual, NO la API.
-###   Cambia @baseUrl a la IP/dominio de tu servidor Python.
+### REST API:       https://tonyua-tribio.hf.space
+### Swagger UI:     https://tonyua-tribio.hf.space/docs
+### Dashboard:      https://tribio-ml-r5btzwfrf9z8eg3pqnkw2h.streamlit.app/
 
-@baseUrl = http://localhost:8000
+@baseUrl = https://tonyua-tribio.hf.space
 
 # ─────────────────────────────────────────────────────────
 # HEALTH CHECK
