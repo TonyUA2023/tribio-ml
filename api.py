@@ -82,8 +82,28 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+def _get_model_cols(bundle: dict) -> list[str]:
+    """Extrae las columnas exactas que espera el pipeline del modelo."""
+    # Primero intenta feature_columns guardado en el bundle
+    if "feature_columns" in bundle:
+        return list(bundle["feature_columns"])
+    # Si no, extrae del ColumnTransformer (M3, M4)
+    pipe = bundle["pipeline"]
+    pre = pipe.steps[0][1]
+    if hasattr(pre, "transformers"):
+        cols = []
+        for _, _, c in pre.transformers:
+            cols.extend(c)
+        return cols
+    return []
+
+
 def _predict(bundle_key: str, row: dict) -> tuple[float, int]:
-    """Devuelve (probability, prediction) usando el pipeline y threshold del bundle."""
+    """
+    Devuelve (probability, prediction) usando el pipeline y threshold del bundle.
+    Construye el DataFrame con las columnas exactas del modelo, llenando con None
+    las columnas que no vienen en el request (el SimpleImputer las maneja).
+    """
     bundle = MODELS.get(bundle_key)
     if bundle is None:
         raise HTTPException(
@@ -92,7 +112,15 @@ def _predict(bundle_key: str, row: dict) -> tuple[float, int]:
         )
     pipe = bundle["pipeline"]
     thr = float(bundle["threshold"])
-    df = pd.DataFrame([row])
+
+    # Construir fila con exactamente las columnas del modelo
+    model_cols = _get_model_cols(bundle)
+    if model_cols:
+        aligned = {col: row.get(col, None) for col in model_cols}
+    else:
+        aligned = row
+
+    df = pd.DataFrame([aligned])
     prob = float(pipe.predict_proba(df)[:, 1][0])
     pred = int(prob >= thr)
     return prob, pred
@@ -295,9 +323,17 @@ def predict_churn(data: ChurnInput):
     - `prediction`: 1 = en riesgo, 0 = estable
     - `recommendations`: estrategias de retención personalizadas
     """
-    row = data.model_dump()
-    row["total_spent"] = float(data.total_orders_paid * data.avg_order_value)
-    row["is_registered"] = 1
+    # M2 fue entrenado con dataset Telco — mapeamos los campos disponibles
+    # El resto de columnas se completan con None y el SimpleImputer las imputa
+    row = {
+        "MonthlyCharges": data.avg_order_value,
+        "TotalCharges": float(data.total_orders_paid * data.avg_order_value),
+        "tenure": max(0, 90 - data.days_since_last_order),  # proxy de antigüedad
+        "PaymentMethod": "Electronic check" if data.preferred_payment_method == "card"
+                         else "Mailed check",
+        "Contract": "Month-to-month" if data.total_orders_paid <= 3 else "One year",
+        "PaperlessBilling": 1 if data.preferred_notification in ("email", "whatsapp") else 0,
+    }
 
     prob, pred = _predict("m2", row)
 

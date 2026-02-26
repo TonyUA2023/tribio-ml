@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:tonyua-tribio.hf.space)",
+      "Bash(python -c \":*)"
+    ]
+  }
+}
