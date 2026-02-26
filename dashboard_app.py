@@ -72,7 +72,7 @@ if missing:
 tabs = []
 tab_labels = []
 if m1 is not None:
-    tab_labels.append("🟦 Módulo 1: Ventas")
+    tab_labels.append("🟦 Módulo 1: Ventassss")
 if m2 is not None:
     tab_labels.append("🟩 Módulo 2: Clientes (Churn)")
 if m3 is not None:
