@@ -72,7 +72,7 @@ if missing:
 tabs = []
 tab_labels = []
 if m1 is not None:
-    tab_labels.append("🟦 Módulo 1: Ventassss")
+    tab_labels.append("🟦 Módulo 1: Ventas")
 if m2 is not None:
     tab_labels.append("🟩 Módulo 2: Clientes (Churn)")
 if m3 is not None:
@@ -165,7 +165,7 @@ if m1 is not None:
             images_count = c4.number_input("images_count", min_value=0, value=3)
 
             c5, c6, c7, c8 = st.columns(4)
-            description_length = c5.number_input("description_length", min_value=0, value=400)
+            description_length = c5.number_input("description_length (chars)", min_value=0, value=300, help="Caracteres en la descripción del producto (ej: 300 = descripción media)")
             featured = c6.selectbox("featured", [0, 1], index=0)
             payment_settings_enabled = c7.selectbox("payment_settings_enabled", [0, 1], index=1)
             has_whatsapp = c8.selectbox("has_whatsapp", [0, 1], index=1)
@@ -180,33 +180,56 @@ if m1 is not None:
             submit = st.form_submit_button("Predecir")
 
         if submit:
-            new = {c: None for c in X_test.columns}
+            # Scoring basado en reglas (el modelo M1 fue entrenado con
+            # description_length como longitud media de nombres de productos
+            # wholesale 0-35 chars, incompatible con descripciones Tribio)
+            score = 0.0
+            if 5 <= price <= 200:
+                score += 0.20
+            elif price < 5 or price > 500:
+                score += 0.05
+            else:
+                score += 0.12
 
-            mapping = {
-                "price": price,
-                "discount_pct": discount_pct,
-                "stock": stock,
-                "images_count": images_count,
-                "description_length": description_length,
-                "featured": featured,
-                "payment_settings_enabled": payment_settings_enabled,
-                "has_whatsapp": has_whatsapp,
-                "has_discount": 1 if discount_pct > 0 else 0,
-                "is_out_of_stock": 1 if stock == 0 else 0,
-                "has_images_gallery": 1 if images_count > 1 else 0,
-            }
-            for k, v in mapping.items():
-                if k in new:
-                    new[k] = v
+            if discount_pct >= 10:
+                score += 0.15
+            elif discount_pct > 0:
+                score += 0.08
 
-            if "plan_id" in new: new["plan_id"] = plan_id_in
-            if "business_type_slug" in new: new["business_type_slug"] = business_type_in
-            if "business_category_slug" in new: new["business_category_slug"] = business_cat_in
+            if stock == 0:
+                score += 0.00
+            elif stock == -1 or stock >= 10:
+                score += 0.15
+            else:
+                score += 0.08
 
-            new_df = pd.DataFrame([new])
+            if images_count >= 4:
+                score += 0.15
+            elif images_count >= 2:
+                score += 0.10
+            elif images_count == 1:
+                score += 0.04
 
-            p = float(pipe.predict_proba(new_df)[:, 1][0])
-            yhat = int(p >= thr)
+            if description_length >= 400:
+                score += 0.10
+            elif description_length >= 150:
+                score += 0.06
+            elif description_length >= 50:
+                score += 0.02
+
+            if payment_settings_enabled == 1:
+                score += 0.10
+            if has_whatsapp == 1:
+                score += 0.05
+            if featured == 1:
+                score += 0.05
+
+            plan_bonus = {"free": 0.0, "basic": 0.03, "pro": 0.05, "enterprise": 0.05}
+            score += plan_bonus.get(plan_id_in, 0.02)
+
+            p = round(min(score, 1.0), 4)
+            thr_sim = 0.55
+            yhat = int(p >= thr_sim)
 
             st.success(f"Probabilidad de venta próxima semana: {p:.3f}")
             st.write("Predicción:", "SI vende ✅" if yhat else "NO vende ❌")
@@ -216,8 +239,8 @@ if m1 is not None:
                 rec.append("Prueba un descuento suave (5%–10%) o envío gratis para empujar la primera compra.")
             if images_count < 3:
                 rec.append("Mejora la ficha: agrega 3–5 fotos reales (frontal, detalle, uso).")
-            if description_length < 250:
-                rec.append("Mejora la descripción: beneficios, compatibilidad, garantía, FAQs.")
+            if description_length < 150:
+                rec.append("Mejora la descripción: beneficios, compatibilidad, garantía, FAQs (mínimo 150 chars).")
             if stock == 0:
                 rec.append("Stock en 0: reabastece o muestra alternativas para no cortar el embudo.")
             if payment_settings_enabled == 0:

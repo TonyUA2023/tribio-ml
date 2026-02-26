@@ -260,6 +260,76 @@ def health():
     )
 
 
+# ---------------------------------------------------------------------------
+# Scoring propio para M1 (el modelo ML fue entrenado con datos históricos
+# de ventas que no están disponibles en tiempo real; usamos un scoring
+# basado en los campos de configuración del producto que sí tenemos)
+# ---------------------------------------------------------------------------
+def _score_sales(data: "SalesInput") -> tuple[float, float]:
+    """
+    Calcula un score de vendibilidad (0-1) basado en la configuración del producto.
+    Devuelve (score, threshold).
+    """
+    score = 0.0
+
+    # Precio competitivo (penaliza extremos)
+    if 5 <= data.price <= 200:
+        score += 0.20
+    elif data.price < 5 or data.price > 500:
+        score += 0.05
+    else:
+        score += 0.12
+
+    # Descuento activo
+    if data.discount_pct >= 10:
+        score += 0.15
+    elif data.discount_pct > 0:
+        score += 0.08
+
+    # Stock disponible
+    if data.stock == 0:
+        score += 0.00   # sin stock = no vende
+    elif data.stock == -1 or data.stock >= 10:
+        score += 0.15
+    else:
+        score += 0.08
+
+    # Imágenes
+    if data.images_count >= 4:
+        score += 0.15
+    elif data.images_count >= 2:
+        score += 0.10
+    elif data.images_count == 1:
+        score += 0.04
+    # 0 imágenes = 0 puntos
+
+    # Descripción
+    if data.description_length >= 400:
+        score += 0.10
+    elif data.description_length >= 150:
+        score += 0.06
+    elif data.description_length >= 50:
+        score += 0.02
+
+    # Pagos online habilitados
+    if data.payment_settings_enabled == 1:
+        score += 0.10
+
+    # WhatsApp de contacto
+    if data.has_whatsapp == 1:
+        score += 0.05
+
+    # Producto destacado
+    if data.featured == 1:
+        score += 0.05
+
+    # Plan del negocio
+    plan_bonus = {"free": 0.0, "basic": 0.03, "pro": 0.05, "enterprise": 0.05}
+    score += plan_bonus.get(data.plan_id, 0.02)
+
+    return round(min(score, 1.0), 4), 0.55
+
+
 # ── Módulo 1: Ventas ────────────────────────────────────────────────────────
 @app.post(
     "/predict/sales",
@@ -275,23 +345,16 @@ def predict_sales(data: SalesInput):
     - `prediction`: 1 = vende, 0 = no vende
     - `recommendations`: acciones concretas para mejorar el producto
     """
-    row = data.model_dump()
-    row["has_discount"] = 1 if data.discount_pct > 0 else 0
-    row["is_out_of_stock"] = 1 if data.stock == 0 else 0
-    row["has_images_gallery"] = 1 if data.images_count > 1 else 0
-
-    prob, pred = _predict("m1", row)
-
-    bundle = MODELS["m1"]
-    thr = float(bundle["threshold"])
+    prob, thr = _score_sales(data)
+    pred = int(prob >= thr)
 
     rec = []
     if data.discount_pct == 0:
         rec.append("Prueba un descuento suave (5-10%) o envío gratis para empujar la primera compra.")
     if data.images_count < 3:
         rec.append("Mejora la ficha: agrega 3-5 fotos reales (frontal, detalle, uso).")
-    if data.description_length < 250:
-        rec.append("Mejora la descripción: beneficios, compatibilidad, garantía, FAQs.")
+    if data.description_length < 150:
+        rec.append("Mejora la descripción: beneficios, compatibilidad, garantía, FAQs (mínimo 150 chars).")
     if data.stock == 0:
         rec.append("Stock en 0: reabastece o muestra alternativas para no cortar el embudo.")
     if data.payment_settings_enabled == 0:
