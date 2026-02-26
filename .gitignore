@@ -1,6 +1,6 @@
 # Ignorar datos crudos y procesados
-data/
-data/raw/
-data/processed/
-__pycache__/
-*.pyc
+# data/
+# data/raw/
+# data/processed/
+# __pycache__/
+#  *.pyc
