@@ -371,6 +371,193 @@ def predict_sales(data: SalesInput):
     )
 
 
+# ---------------------------------------------------------------------------
+# Scoring propio M2 — Churn
+# (M2 fue entrenado con Telco dataset, columnas incompatibles con Tribio)
+# ---------------------------------------------------------------------------
+def _score_churn(data: "ChurnInput") -> tuple[float, float]:
+    """Score de riesgo de churn (0=estable, 1=alto riesgo). Devuelve (score, threshold)."""
+    score = 0.0
+
+    # Recencia: cuántos días sin comprar (mayor = más riesgo)
+    if data.days_since_last_order >= 60:
+        score += 0.30
+    elif data.days_since_last_order >= 30:
+        score += 0.20
+    elif data.days_since_last_order >= 14:
+        score += 0.08
+    # < 14 días = 0 riesgo por recencia
+
+    # Frecuencia: pocas órdenes = más riesgo
+    if data.total_orders_paid == 0:
+        score += 0.25
+    elif data.total_orders_paid == 1:
+        score += 0.18
+    elif data.total_orders_paid <= 3:
+        score += 0.08
+    # > 3 órdenes = 0 riesgo por frecuencia
+
+    # Valor promedio: bajo AOV = menos engagement
+    if data.avg_order_value < 20:
+        score += 0.10
+    elif data.avg_order_value < 50:
+        score += 0.05
+
+    # Tasa de cancelación alta = riesgo
+    if data.cancellation_rate >= 0.30:
+        score += 0.15
+    elif data.cancellation_rate >= 0.12:
+        score += 0.08
+
+    # Visitas al perfil sin compra = intención no concretada
+    if data.profile_visits_count >= 10 and data.total_orders_paid == 0:
+        score += 0.10
+    elif data.profile_visits_count == 0:
+        score += 0.08  # sin actividad
+
+    # Canal de pago: efectivo = más fricción = más riesgo
+    if data.preferred_payment_method == "cash":
+        score += 0.05
+
+    return round(min(score, 1.0), 4), 0.40
+
+
+# ---------------------------------------------------------------------------
+# Scoring propio M3 — Diseño / Conversión
+# (M3 fue entrenado con datos de sesiones web Google Merchandise,
+#  columnas: events_count, pageviews, bounce, country, device — no Tribio)
+# ---------------------------------------------------------------------------
+def _score_design(data: "DesignInput") -> tuple[float, float]:
+    """Score de probabilidad de alta conversión (0-1). Devuelve (score, threshold)."""
+    score = 0.0
+
+    # Pagos online: el más crítico para conversión
+    if data.payment_settings_enabled == 1:
+        score += 0.20
+
+    # Hero con CTA
+    if data.hero_has_cta == 1:
+        score += 0.12
+
+    # Logo y portada: confianza visual
+    if data.has_custom_logo == 1:
+        score += 0.06
+    if data.has_cover_image == 1:
+        score += 0.06
+
+    # Productos con imagen
+    if data.products_with_image_pct >= 0.90:
+        score += 0.12
+    elif data.products_with_image_pct >= 0.70:
+        score += 0.08
+    elif data.products_with_image_pct >= 0.50:
+        score += 0.04
+
+    # Productos con descripción
+    if data.products_with_description_pct >= 0.80:
+        score += 0.10
+    elif data.products_with_description_pct >= 0.55:
+        score += 0.06
+    elif data.products_with_description_pct >= 0.30:
+        score += 0.02
+
+    # Imágenes por producto
+    if data.avg_images_per_product >= 3.0:
+        score += 0.08
+    elif data.avg_images_per_product >= 2.0:
+        score += 0.05
+
+    # Menú: demasiados ítems confunde
+    if 3 <= data.navigation_menu_items_count <= 8:
+        score += 0.05
+    elif data.navigation_menu_items_count > 12:
+        score -= 0.03
+
+    # Descuentos activos
+    if data.products_with_discount_pct >= 0.20:
+        score += 0.06
+    elif data.products_with_discount_pct >= 0.05:
+        score += 0.03
+
+    # Plan del negocio
+    plan_bonus = {"free": 0.0, "basic": 0.03, "pro": 0.06, "enterprise": 0.06}
+    score += plan_bonus.get(data.plan_id, 0.02)
+
+    return round(min(max(score, 0.0), 1.0), 4), 0.50
+
+
+# ---------------------------------------------------------------------------
+# Scoring propio M4 — Crecimiento / Contenido
+# (M4 fue entrenado con dataset sintético con columnas como week,
+#  pct_posts_carousel, best_post_hour que no están disponibles en runtime)
+# ---------------------------------------------------------------------------
+def _score_growth(data: "GrowthInput") -> tuple[float, float]:
+    """Score de probabilidad de crecimiento próxima semana (0-1). Devuelve (score, threshold)."""
+    score = 0.0
+
+    # Frecuencia de publicación
+    if data.days_between_posts <= 1.5:
+        score += 0.18
+    elif data.days_between_posts <= 3.0:
+        score += 0.12
+    elif data.days_between_posts <= 5.0:
+        score += 0.05
+    # > 5 días = 0 puntos
+
+    # Volumen de contenido
+    if data.posts_count_30d >= 15:
+        score += 0.10
+    elif data.posts_count_30d >= 8:
+        score += 0.06
+    elif data.posts_count_30d >= 3:
+        score += 0.02
+
+    if data.stories_count_30d >= 25:
+        score += 0.08
+    elif data.stories_count_30d >= 12:
+        score += 0.05
+
+    # Formato de video (mayor alcance orgánico)
+    if data.pct_posts_with_video >= 0.60:
+        score += 0.10
+    elif data.pct_posts_with_video >= 0.35:
+        score += 0.06
+    elif data.pct_posts_with_video >= 0.15:
+        score += 0.02
+
+    # Engagement rate
+    if data.post_engagement_rate >= 0.06:
+        score += 0.12
+    elif data.post_engagement_rate >= 0.03:
+        score += 0.07
+    elif data.post_engagement_rate >= 0.01:
+        score += 0.03
+
+    # Reputación / reseñas
+    if data.avg_rating >= 4.7:
+        score += 0.08
+    elif data.avg_rating >= 4.2:
+        score += 0.05
+    elif data.avg_rating < 3.5:
+        score -= 0.05
+
+    if data.pct_1_2_star <= 0.05:
+        score += 0.04
+    elif data.pct_1_2_star >= 0.20:
+        score -= 0.04
+
+    # Redes sociales activas (cada canal suma alcance)
+    channels = data.has_instagram + data.has_tiktok + data.has_facebook + data.has_whatsapp
+    if channels >= 3:
+        score += 0.08
+    elif channels >= 2:
+        score += 0.05
+    elif channels == 1:
+        score += 0.02
+
+    return round(min(max(score, 0.0), 1.0), 4), 0.45
+
+
 # ── Módulo 2: Churn ─────────────────────────────────────────────────────────
 @app.post(
     "/predict/churn",
@@ -386,22 +573,8 @@ def predict_churn(data: ChurnInput):
     - `prediction`: 1 = en riesgo, 0 = estable
     - `recommendations`: estrategias de retención personalizadas
     """
-    # M2 fue entrenado con dataset Telco — mapeamos los campos disponibles
-    # El resto de columnas se completan con None y el SimpleImputer las imputa
-    row = {
-        "MonthlyCharges": data.avg_order_value,
-        "TotalCharges": float(data.total_orders_paid * data.avg_order_value),
-        "tenure": max(0, 90 - data.days_since_last_order),  # proxy de antigüedad
-        "PaymentMethod": "Electronic check" if data.preferred_payment_method == "card"
-                         else "Mailed check",
-        "Contract": "Month-to-month" if data.total_orders_paid <= 3 else "One year",
-        "PaperlessBilling": 1 if data.preferred_notification in ("email", "whatsapp") else 0,
-    }
-
-    prob, pred = _predict("m2", row)
-
-    bundle = MODELS["m2"]
-    thr = float(bundle["threshold"])
+    prob, thr = _score_churn(data)
+    pred = int(prob >= thr)
 
     rec = []
     if data.days_since_last_order >= 30:
@@ -441,11 +614,8 @@ def predict_design(data: DesignInput):
     - `prediction`: 1 = alta conversión, 0 = media/baja
     - `recommendations`: mejoras concretas al diseño y configuración
     """
-    row = data.model_dump()
-    prob, pred = _predict("m3", row)
-
-    bundle = MODELS["m3"]
-    thr = float(bundle["threshold"])
+    prob, thr = _score_design(data)
+    pred = int(prob >= thr)
 
     rec = []
     if data.payment_settings_enabled == 0:
@@ -487,11 +657,8 @@ def predict_growth(data: GrowthInput):
     - `prediction`: 1 = crecerá, 0 = estable/baja
     - `recommendations`: estrategia de contenido accionable
     """
-    row = data.model_dump()
-    prob, pred = _predict("m4", row)
-
-    bundle = MODELS["m4"]
-    thr = float(bundle["threshold"])
+    prob, thr = _score_growth(data)
+    pred = int(prob >= thr)
 
     rec = []
     if data.pct_posts_with_video < 0.45:
